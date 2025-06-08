@@ -1,9 +1,3 @@
-/**
- * Evento chamado quando uma mensagem
- * é enviada para o grupo do WhatsApp
- *
- * @author Dev Gui
- */
 const {
   isAtLeastMinutesInPast,
   GROUP_PARTICIPANT_ADD,
@@ -17,23 +11,13 @@ const { errorLog } = require("../utils/logger");
 const { badMacHandler } = require("../utils/badMacHandler");
 const { checkIfMemberIsMuted } = require("../utils/database");
 
-exports.onMessagesUpsert = async ({
-  socket,
-  messages,
-  groupCache,
-  startProcess,
-}) => {
-  if (!messages.length) {
-    return;
-  }
+exports.onMessagesUpsert = async ({ socket, messages, groupCache, startProcess }) => {
+  if (!messages.length) return;
 
   for (const webMessage of messages) {
     try {
       const timestamp = webMessage.messageTimestamp;
-
-      if (isAtLeastMinutesInPast(timestamp)) {
-        continue;
-      }
+      if (isAtLeastMinutesInPast(timestamp)) continue;
 
       if (isAddOrLeave.includes(webMessage.messageStubType)) {
         let action = "";
@@ -52,10 +36,7 @@ exports.onMessagesUpsert = async ({
         });
       } else {
         const commonFunctions = loadCommonFunctions({ socket, webMessage });
-
-        if (!commonFunctions) {
-          continue;
-        }
+        if (!commonFunctions) continue;
 
         if (
           checkIfMemberIsMuted(
@@ -66,28 +47,20 @@ exports.onMessagesUpsert = async ({
           try {
             await commonFunctions.deleteMessage(webMessage.key);
           } catch (error) {
-            errorLog(
-              `Erro ao deletar mensagem de membro silenciado, provavelmente o bot não é administrador do grupo! ${error.message}`
-            );
+            errorLog(`Erro ao deletar mensagem de membro silenciado, provavelmente o bot não é administrador do grupo! ${error.message}`);
           }
-
           return;
         }
 
         await dynamicCommand(commonFunctions, startProcess);
       }
     } catch (error) {
-      if (badMacHandler.handleError(error, "message-processing")) {
-        continue;
-      }
-
+      if (badMacHandler.handleError(error, "message-processing")) continue;
       if (badMacHandler.isSessionError(error)) {
         errorLog(`Erro de sessão ao processar mensagem: ${error.message}`);
         continue;
       }
-
       errorLog(`Erro ao processar mensagem: ${error.message}`);
-
       continue;
     }
   }

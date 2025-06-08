@@ -1,38 +1,59 @@
 /**
- * Melhorado por: Mkg
- *
+ * Comando ping - responde com latência e uptime
  * @author Dev Gui
  */
-const { PREFIX } = require(`${BASE_DIR}/config`);
+
+const { PREFIX } = require(`${global.BASE_DIR}/config`);
 
 module.exports = {
   name: "ping",
-  description:
-    "Verificar se o bot está online, o tempo de resposta e o tempo de atividade.",
-  commands: ["ping", "pong"],
+  description: "Responde com latência e uptime do bot",
+  commands: ["ping"],
   usage: `${PREFIX}ping`,
+
   /**
-   * @param {CommandHandleProps} props
+   * @param {Object} params
    * @returns {Promise<void>}
    */
-  handle: async ({ sendReply, sendReact, startProcess, fullMessage }) => {
-    const response = fullMessage.slice(1).startsWith("ping")
-      ? "🏓 Pong!"
-      : "🏓 Ping!";
+  handle: async ({
+    socket,
+    userJid,
+    remoteJid,
+    pushName,
+    startProcess,
+  }) => {
+    try {
+      const sender = userJid.split("@")[0];
+      const name = pushName || sender;
 
-    await sendReact("🏓");
+      const ping = Date.now() - startProcess;
+      const uptime = process.uptime();
+      const h = Math.floor(uptime / 3600);
+      const m = Math.floor((uptime % 3600) / 60);
+      const s = Math.floor(uptime % 60);
+      const now = new Date();
+      const data = now.toLocaleDateString("pt-BR");
+      const hora = now.toLocaleTimeString("pt-BR");
 
-    const uptime = process.uptime();
+      const msg = `
+🤖 🌙 Boa ${now.getHours() < 12 ? "dia" : now.getHours() < 18 ? "tarde" : "noite"}, @${sender}🍅
 
-    const h = Math.floor(uptime / 3600);
-    const m = Math.floor((uptime % 3600) / 60);
-    const s = Math.floor(uptime % 60);
+📅 Data: ${data}
+⏰ Hora: ${hora}
+🚀 Latência: ${ping}ms
+⏳ Uptime: ${h}h ${m}m ${s}s
+      `.trim();
 
-    const ping = Date.now() - startProcess;
-
-    await sendReply(`${response}
-
-📶 Velocidade de resposta: ${ping}ms
-⏱️ Uptime: ${h}h ${m}m ${s}s`);
+      await socket.sendMessage(remoteJid, {
+        text: msg,
+        mentions: [userJid],
+      });
+    } catch (error) {
+      await socket.sendMessage(remoteJid, {
+        text:
+          "🤖 ❌ Erro! Ocorreu um erro ao executar o comando ping! O desenvolvedor foi notificado!",
+      });
+      console.error("[PING COMMAND ERROR]", error);
+    }
   },
 };
